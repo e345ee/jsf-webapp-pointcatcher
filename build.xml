@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="server" default="history-build" basedir=".">
+    <property file="params.properties"/>
+
+
+    <path id="classpath">
+        <fileset dir="${lib.dir}" includes="**/*.jar"/>
+    </path>
+    <taskdef resource="net/sf/antcontrib/antcontrib.properties">
+        <classpath>
+            <pathelement location="D:/web/demo1/lib/ant-contrib-1.0b3.jar"/>
+        </classpath>
+    </taskdef>
+
+    <target name="history">
+        <exec executable="powershell">
+            <arg value="-ExecutionPolicy"/>
+            <arg value="Bypass"/>
+            <arg value="-File"/>
+            <arg value="history.ps1"/>
+        </exec>
+    </target>
+
+
+    <path id="classpath.test">
+        <path refid="classpath"/>
+        <pathelement location="${classes.dir}"/>
+    </path>
+
+    <target name="clean">
+        <echo message="Cleaning build..."/>
+        <delete dir="${build.dir}"/>
+        <delete dir="${junit.report.dir}"/>
+    </target>
+
+    <target name="compile">
+        <echo message="***** COMPILE STARTED *****"/>
+        <mkdir dir="${classes.dir}"/>
+        <mkdir dir="${test.classes.dir}"/>
+        <javac srcdir="${src.dir}" destdir="${classes.dir}" classpathref="classpath" includeantruntime="false"/>
+        <copy todir="${classes.dir}">
+            <fileset dir="${resources.dir}"/>
+        </copy>
+        <echo message="***** COMPILE COMPLETED *****"/>
+    </target>
+
+    <target name="build" depends="compile">
+        <echo message="***** BUILD STARTED *****"/>
+        <mkdir dir="${build.dir}"/>
+        <mkdir dir="${build.dir}/WEB-INF/lib"/>
+        <mkdir dir="${build.dir}/META-INF"/>
+
+        <copy todir="${build.dir}">
+            <fileset dir="${webapp.dir}"/>
+        </copy>
+
+        <copy todir="${build.dir}/WEB-INF/lib">
+            <fileset dir="${lib.dir}" includes="*.jar"/>
+        </copy>
+
+        <war destfile="${war.file}" webxml="${webapp.dir}/WEB-INF/web.xml">
+            <classes dir="${classes.dir}"/>
+            <lib dir="${build.dir}/WEB-INF/lib"/>
+            <fileset dir="${webapp.dir}"/>
+            <manifest>
+                <attribute name="Main-Class" value="${main.class}"/>
+                <attribute name="Implementation-Version" value="${version}"/>
+            </manifest>
+        </war>
+
+        <echo message="***** BUILD COMPLETED *****"/>
+    </target>
+
+
+    <target name="test" depends="build">
+        <echo message="***** TEST STARTED *****"/>
+        <mkdir dir="${test.classes.dir}"/>
+        <mkdir dir="${junit.report.dir}"/>
+        <javac destdir="${test.classes.dir}" srcdir="${test.dir}" includeantruntime="false" encoding="UTF-8">
+            <classpath>
+                <path refid="classpath.test"/>
+            </classpath>
+        </javac>
+        <junit printsummary="on" haltonfailure="true" haltonerror="true">
+            <classpath>
+                <path refid="classpath.test"/>
+                <pathelement location="${test.classes.dir}"/>
+            </classpath>
+            <batchtest fork="yes" todir="${junit.report.dir}">
+                <formatter type="plain"/>
+                <fileset dir="${test.dir}" includes="**/*Test.java"/>
+            </batchtest>
+        </junit>
+        <echo message="***** TEST COMPLETED *****"/>
+    </target>
+
+
+
+    <target name="scp" depends="build">
+        <echo message="Sending WAR to WildFly deployments directory..."/>
+        <copy file="${war.file}"
+              tofile="C:/Users/Григорий/Downloads/wildfly-preview-26.1.3.Final/standalone/deployments/${ant.project.name}.war"/>
+    </target>
+
+    <property file="params.properties"/>
+
+    <target name="scp-new" depends="build">
+        <echo message="Uploading ${scp.file} to ${scp.user}@${scp.host} via pscp..."/>
+        <exec executable="${pscp.exe}" failonerror="true">
+            <arg value="-P"/>
+            <arg value="${scp.port}"/>
+            <arg value="-pw"/>
+            <arg value="${scp.pass}"/>
+            <arg value="${scp.file}"/>
+            <arg value="${scp.user}@${scp.host}:${scp.dest.dir}"/>
+        </exec>
+    </target>
+
+
+
+
+
+</project>
+
